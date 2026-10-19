@@ -274,10 +274,10 @@ def read_musicxml(path, start_measure=None):
 
 def write_spk(path, title, notes):
     with open(path, "w") as f:
-        f.write(f"title: {title}\n")
+        f.write(f"{title}\n")
         for note_idx, ms in notes:
             pitch = 0 if note_idx is None else note_pitch(note_idx)
-            f.write(f"{pitch}, {ms}\n")
+            f.write(f"{pitch} {ms}\n")
 
 
 def build_square_wave(hz, sample_count):

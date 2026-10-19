@@ -6,19 +6,22 @@ and [GentleOS/32](https://github.com/luke8086/gentleos32).
 
 ## SPK format
 
-An SPK file contains a plain text list of events and metadata, for example:
+An SPK file contains a plain text title and a list of notes, for example:
 
 ```
-title: Mozart WA - Turkish March
-659, 200
-622, 200
-659, 200
-0, 200
+Mozart WA - Turkish March
+659 200
+622 200
+659 200
+0 200
 ```
 
-A metadata line contains a `key: value` pair. Currently only `title` is recognized.
+The first line is always the title of the song.
 
-An event line contains the frequency (Hz) and the duration (ms) of a note. A frequency of 0 means rest.
+The note lines contain the frequency (Hz) and the duration (ms)
+of a note, separated by a single space.
+
+A frequency of 0 means rest.
 
 ## Conversion from MusicXML
 
