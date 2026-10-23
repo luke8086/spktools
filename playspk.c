@@ -7,6 +7,7 @@
  * Usage: playspk SONG.SPK
  */
 
+#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,6 +27,7 @@ unsigned _bios_keybrd(unsigned service);
 #define _KEYBRD_READY 1
 void (__interrupt __far *_dos_getvect(unsigned))();
 void _dos_setvect(unsigned, void (__interrupt __far *)());
+#define SIGBREAK SIGINT
 #else
 #include <bios.h>
 #include <conio.h>
@@ -112,6 +114,12 @@ die(const char *fmt, ...)
     fprintf(stderr, "\n");
 
     exit(1);
+}
+
+static void
+ignore_signal(int sig)
+{
+    (void)sig;
 }
 
 static void
@@ -329,6 +337,10 @@ main(int argc, char **argv)
     }
 
     atexit(deinit);
+
+    /* Prevent Ctrl-C and Ctrl-Break from stopping the app without deinitialization */
+    signal(SIGINT, ignore_signal);
+    signal(SIGBREAK, ignore_signal);
 
     load_song(argv[1]);
 
