@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* Silence IDE warnings */
 #ifdef __clang__
@@ -138,6 +139,16 @@ speaker_start_note(void)
 }
 
 static void
+speaker_get_state(speaker_st *out)
+{
+    _disable();
+
+    memcpy(out, (const void *)&speaker, sizeof(*out));
+
+    _enable();
+}
+
+static void
 speaker_play_song(const note_st *notes)
 {
     _disable();
@@ -164,6 +175,25 @@ speaker_stop(void)
     speaker_set_freq(0);
 
     _enable();
+}
+
+/* Must be called in interrupt context */
+static void
+speaker_on_tick(void)
+{
+    if (speaker.state != SPEAKER_STATE_PLAYING) {
+        return;
+    }
+
+    ++speaker.song_elapsed_ticks;
+    --speaker.note_ticks_left;
+
+    if (speaker.note_ticks_left > 0) {
+        return;
+    }
+
+    ++speaker.note;
+    speaker_start_note();
 }
 
 static void

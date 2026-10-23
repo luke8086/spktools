@@ -4,5 +4,7 @@
 /tmp/*
 *.obj
 *.OBJ
+*.err
+*.ERR
 *.swp
 __pycache__
