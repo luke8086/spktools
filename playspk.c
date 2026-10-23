@@ -83,9 +83,12 @@ typedef struct {
 typedef struct {
     uint8_t state;
 
+    const note_st *song;
+    int32_t song_elapsed_ticks;
+    int32_t song_total_ticks;
+
     const note_st *note;
     uint16_t note_ticks_left;
-    int32_t song_elapsed_ticks;
 } speaker_st;
 
 typedef struct {
@@ -180,13 +183,15 @@ speaker_get_state(speaker_st *out)
 }
 
 static void
-speaker_play_song(const note_st *notes)
+speaker_play_song(const note_st *notes, int32_t total_ticks)
 {
     _disable();
 
     speaker.state = SPEAKER_STATE_PLAYING;
-    speaker.note = notes;
+    speaker.song = notes;
     speaker.song_elapsed_ticks = 0;
+    speaker.song_total_ticks = total_ticks;
+    speaker.note = notes;
 
     speaker_start_note();
 
@@ -199,9 +204,11 @@ speaker_stop(void)
     _disable();
 
     speaker.state = SPEAKER_STATE_STOPPED;
+    speaker.song = NULL;
+    speaker.song_elapsed_ticks = 0;
+    speaker.song_total_ticks = 0;
     speaker.note = NULL;
     speaker.note_ticks_left = 0;
-    speaker.song_elapsed_ticks = 0;
 
     speaker_set_freq(0);
 
@@ -396,7 +403,7 @@ main(int argc, char **argv)
     printf("Press ESC to exit\n");
 
     timer_init();
-    speaker_play_song(song.notes);
+    speaker_play_song(song.notes, song.total_ticks);
 
     for (;;) {
         speaker_get_state(&st);
