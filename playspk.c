@@ -23,6 +23,7 @@ void _enable(void);
 void _disable(void);
 unsigned _bios_keybrd(unsigned service);
 #define _KEYBRD_READ 0
+#define _KEYBRD_READY 1
 void (__interrupt __far *_dos_getvect(unsigned))();
 void _dos_setvect(unsigned, void (__interrupt __far *)());
 #else
@@ -93,6 +94,9 @@ typedef struct {
 static timer_st timer;
 static volatile speaker_st speaker;
 static song_st song;
+
+void cpu_hlt(void);
+#pragma aux cpu_hlt = "hlt";
 
 static void
 die(const char *fmt, ...)
@@ -317,6 +321,8 @@ deinit(void)
 int
 main(int argc, char **argv)
 {
+    speaker_st st;
+
     if (argc != 2) {
         fprintf(stderr, "usage: %s SONG.SPK\n", argv[0]);
         exit(1);
@@ -329,10 +335,22 @@ main(int argc, char **argv)
     printf("Loaded '%s' (%u notes)\n", song.title, song.note_count);
 
     timer_init();
-
     speaker_play_song(song.notes);
-    (void)_bios_keybrd(_KEYBRD_READ);
-    speaker_stop();
+
+    for (;;) {
+        speaker_get_state(&st);
+
+        if (st.state != SPEAKER_STATE_PLAYING) {
+            break;
+        }
+
+        if (_bios_keybrd(_KEYBRD_READY)) {
+            (void)_bios_keybrd(_KEYBRD_READ);
+            break;
+        }
+
+        cpu_hlt();
+    }
 
     deinit();
 
