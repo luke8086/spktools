@@ -12,11 +12,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* Silence IDE warnings */
+#ifdef __clang__
+unsigned inp(unsigned port);
+unsigned outp(unsigned port, unsigned value);
+void _enable(void);
+void _disable(void);
+unsigned _bios_keybrd(unsigned service);
+#define _KEYBRD_READ 0
+#else
+#include <bios.h>
+#include <conio.h>
+#include <i86.h>
+#endif
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+#define PIT_FREQUENCY 1193180UL
+#define TICK_FREQUENCY 100
+#define REST_PITCH 59659U
+
 enum {
-    TICK_FREQUENCY = 100,
+    PIT_CR2 = 0x42, /* PIT counter 2 data port */
+    PIT_CWR = 0x43, /* PIT control word register */
+    PPI_PB = 0x61,  /* Port B of the 8255A-5 PPI */
+};
+
+enum {
+    SPEAKER_STATE_STOPPED = 0,
+    SPEAKER_STATE_PLAYING = 1,
+};
+
+enum {
     MAX_NOTES = 4096,
     MAX_TITLE = 64,
 };
@@ -35,6 +63,15 @@ typedef struct {
     int32_t total_ticks;
 } song_st;
 
+typedef struct {
+    uint8_t state;
+
+    const note_st *note;
+    uint16_t note_ticks_left;
+    int32_t song_elapsed_ticks;
+} speaker_st;
+
+static volatile speaker_st speaker;
 static song_st song;
 
 static void
@@ -51,6 +88,82 @@ die(const char *fmt, ...)
     fprintf(stderr, "\n");
 
     exit(1);
+}
+
+static void
+speaker_set_freq(uint16_t hz)
+{
+    unsigned val;
+    uint32_t divisor;
+
+    /* If hz is 0, turn off the speaker */
+    if (hz == 0) {
+        val = inp(PPI_PB);
+        outp(PPI_PB, val & ~0x03);
+        return;
+    }
+
+    divisor = PIT_FREQUENCY / hz;
+    divisor = MIN(divisor, 0xffff);
+
+    /* Configure counter 2 of PIT to mode 3 (square wave) */
+    outp(PIT_CWR, 0xB6);
+
+    /* Set counter 2 to the desired frequency */
+    outp(PIT_CR2, (unsigned)divisor & 0xFF);
+    outp(PIT_CR2, ((unsigned)divisor >> 8) & 0xFF);
+
+    /* Enable speaker by setting bits 0 (speaker enable) and 1 (gate) on port 0x61 */
+    val = inp(PPI_PB);
+    outp(PPI_PB, val | 0x03);
+}
+
+/* Must be called with interrupts disabled or in interrupt context */
+static void
+speaker_start_note(void)
+{
+    const note_st *note = speaker.note;
+
+    if (note == NULL || note->ticks == 0) {
+        /* Keep elapsed time for inspection */
+        speaker.state = SPEAKER_STATE_STOPPED;
+        speaker.note = NULL;
+        speaker_set_freq(0);
+        return;
+    }
+
+    speaker.note_ticks_left = note->ticks;
+
+    speaker_set_freq(note->pitch ? note->pitch : REST_PITCH);
+}
+
+static void
+speaker_play_song(const note_st *notes)
+{
+    _disable();
+
+    speaker.state = SPEAKER_STATE_PLAYING;
+    speaker.note = notes;
+    speaker.song_elapsed_ticks = 0;
+
+    speaker_start_note();
+
+    _enable();
+}
+
+static void
+speaker_stop(void)
+{
+    _disable();
+
+    speaker.state = SPEAKER_STATE_STOPPED;
+    speaker.note = NULL;
+    speaker.note_ticks_left = 0;
+    speaker.song_elapsed_ticks = 0;
+
+    speaker_set_freq(0);
+
+    _enable();
 }
 
 static void
@@ -105,6 +218,10 @@ main(int argc, char **argv)
     load_song(argv[1]);
 
     printf("Loaded '%s' (%u notes)\n", song.title, song.note_count);
+
+    speaker_play_song(song.notes);
+    (void)_bios_keybrd(_KEYBRD_READ);
+    speaker_stop();
 
     return 0;
 }
