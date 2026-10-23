@@ -344,6 +344,29 @@ update_progress(int32_t elapsed_ticks, int32_t total_ticks)
 }
 
 static void
+handle_keyboard(int *wants_quit)
+{
+    unsigned key;
+    uint8_t ascii;
+
+    if (!_bios_keybrd(_KEYBRD_READY)) {
+        return;
+    }
+
+    key = _bios_keybrd(_KEYBRD_READ);
+    ascii = key & 0xFF;
+
+    switch (ascii) {
+    case 0x1B: /* ESC */
+    case 0x03: /* Ctrl-C */
+    case 'q':
+    case 'Q':
+        *wants_quit = 1;
+        break;
+    }
+}
+
+static void
 deinit(void)
 {
     speaker_stop();
@@ -354,6 +377,7 @@ int
 main(int argc, char **argv)
 {
     speaker_st st;
+    int wants_quit = 0;
 
     if (argc != 2) {
         fprintf(stderr, "usage: %s SONG.SPK\n", argv[0]);
@@ -368,7 +392,8 @@ main(int argc, char **argv)
 
     load_song(argv[1]);
 
-    printf("Playing '%s' (%u notes)\n", song.title, song.note_count);
+    printf("Playing '%s' (%u notes)...\n", song.title, song.note_count);
+    printf("Press ESC to exit\n");
 
     timer_init();
     speaker_play_song(song.notes);
@@ -380,8 +405,9 @@ main(int argc, char **argv)
             break;
         }
 
-        if (_bios_keybrd(_KEYBRD_READY)) {
-            (void)_bios_keybrd(_KEYBRD_READ);
+        handle_keyboard(&wants_quit);
+
+        if (wants_quit) {
             break;
         }
 
