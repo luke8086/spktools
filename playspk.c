@@ -43,6 +43,8 @@ void _dos_setvect(unsigned, void (__interrupt __far *)());
 
 #define PIT_FREQUENCY 1193180UL
 #define TICK_FREQUENCY 100
+#define SEEK_TICKS (TICK_FREQUENCY * 5)
+
 #define REST_PITCH 59659U
 
 enum {
@@ -215,6 +217,41 @@ speaker_stop(void)
     _enable();
 }
 
+static void
+speaker_seek(int32_t ticks)
+{
+    const note_st *note;
+    int32_t ticks_before_note = 0;
+
+    for (note = speaker.song; note && note->ticks != 0; ++note) {
+        if (ticks_before_note + note->ticks > ticks) {
+            break;
+        }
+
+        ticks_before_note += note->ticks;
+    }
+
+    if (!note || note->ticks == 0) {
+        speaker_stop();
+        return;
+    }
+
+    _disable();
+
+    if (speaker.state != SPEAKER_STATE_PLAYING) {
+        _enable();
+        return;
+    }
+
+    speaker.song_elapsed_ticks = ticks;
+    speaker.note = note;
+    speaker.note_ticks_left = note->ticks - (ticks - ticks_before_note);
+
+    speaker_set_freq(note->pitch ? note->pitch : REST_PITCH);
+
+    _enable();
+}
+
 /* Must be called in interrupt context */
 static void
 speaker_on_tick(void)
@@ -327,6 +364,32 @@ load_song(const char *path)
 }
 
 static void
+seek_song(int forward)
+{
+    speaker_st st;
+    int32_t ticks;
+
+    speaker_get_state(&st);
+
+    if (st.state != SPEAKER_STATE_PLAYING) {
+        return;
+    }
+
+    if (forward) {
+        ticks = st.song_elapsed_ticks + SEEK_TICKS;
+    } else {
+        ticks = st.song_elapsed_ticks > SEEK_TICKS ? st.song_elapsed_ticks - SEEK_TICKS : 0;
+    }
+
+    if (ticks >= st.song_total_ticks) {
+        speaker_stop();
+        return;
+    }
+
+    speaker_seek(ticks);
+}
+
+static void
 update_progress(int32_t elapsed_ticks, int32_t total_ticks)
 {
     static int last_elapsed_secs = -1;
@@ -351,10 +414,17 @@ update_progress(int32_t elapsed_ticks, int32_t total_ticks)
 }
 
 static void
+clear_progress(void)
+{
+    printf("\r                              \r");
+    fflush(stdout);
+}
+
+static void
 handle_keyboard(int *wants_quit)
 {
     unsigned key;
-    uint8_t ascii;
+    uint8_t ascii, scancode;
 
     if (!_bios_keybrd(_KEYBRD_READY)) {
         return;
@@ -362,6 +432,12 @@ handle_keyboard(int *wants_quit)
 
     key = _bios_keybrd(_KEYBRD_READ);
     ascii = key & 0xFF;
+    scancode = key >> 8;
+
+    switch (scancode) {
+    case 0x4B: seek_song(0); return; /* Left */
+    case 0x4D: seek_song(1); return; /* Right */
+    }
 
     switch (ascii) {
     case 0x1B: /* ESC */
@@ -369,7 +445,7 @@ handle_keyboard(int *wants_quit)
     case 'q':
     case 'Q':
         *wants_quit = 1;
-        break;
+        return;
     }
 }
 
@@ -425,8 +501,7 @@ main(int argc, char **argv)
 
     deinit();
 
-    update_progress(st.song_elapsed_ticks, song.total_ticks);
-    printf("\n");
+    clear_progress();
 
     return 0;
 }
