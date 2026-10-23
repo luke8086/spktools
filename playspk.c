@@ -15,17 +15,25 @@
 
 /* Silence IDE warnings */
 #ifdef __clang__
+#define __far
+#define __interrupt
 unsigned inp(unsigned port);
 unsigned outp(unsigned port, unsigned value);
 void _enable(void);
 void _disable(void);
 unsigned _bios_keybrd(unsigned service);
 #define _KEYBRD_READ 0
+void (__interrupt __far *_dos_getvect(unsigned))();
+void _dos_setvect(unsigned, void (__interrupt __far *)());
 #else
 #include <bios.h>
 #include <conio.h>
+#include <dos.h>
 #include <i86.h>
 #endif
+
+/* Watcom's stack overflow checks are incompatible with interrupt handlers */
+#pragma off (check_stack)
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -35,9 +43,12 @@ unsigned _bios_keybrd(unsigned service);
 #define REST_PITCH 59659U
 
 enum {
+    PIT_INTNO = 0x08,
+    PIT_CR0 = 0x40, /* PIT counter 0 data port */
     PIT_CR2 = 0x42, /* PIT counter 2 data port */
     PIT_CWR = 0x43, /* PIT control word register */
     PPI_PB = 0x61,  /* Port B of the 8255A-5 PPI */
+    PIC_CMD = 0x20, /* Cmd port of the master 8259A PIC */
 };
 
 enum {
@@ -51,6 +62,8 @@ enum {
 };
 
 #define TITLE_FORMAT "%63[^\n]"
+
+typedef void (__interrupt __far *isr_handler_fn)();
 
 typedef struct {
     uint16_t pitch;
@@ -72,6 +85,12 @@ typedef struct {
     int32_t song_elapsed_ticks;
 } speaker_st;
 
+typedef struct {
+    isr_handler_fn saved_isr;
+    int initialized;
+} timer_st;
+
+static timer_st timer;
 static volatile speaker_st speaker;
 static song_st song;
 
@@ -196,6 +215,57 @@ speaker_on_tick(void)
     speaker_start_note();
 }
 
+static void __interrupt __far
+timer_handle_intr(void)
+{
+    /* Note, default handler is not called, so the DOS clock hangs */
+
+    speaker_on_tick();
+
+    outp(PIC_CMD, 0x20);
+}
+
+static void
+timer_set_counter_0(uint16_t div)
+{
+    /* Set Counter 0, write both LSB and MSB, use mode 3 (square wave), binary counter */
+    outp(PIT_CWR, 0x36);
+
+    /* Write LSB and MSB for counter 0 */
+    outp(PIT_CR0, div & 0xFF);
+    outp(PIT_CR0, (div >> 8) & 0xFF);
+}
+
+static void
+timer_init(void)
+{
+    timer.saved_isr = _dos_getvect(PIT_INTNO);
+
+    _disable();
+
+    timer_set_counter_0((unsigned)(PIT_FREQUENCY / TICK_FREQUENCY));
+    _dos_setvect(PIT_INTNO, timer_handle_intr);
+    timer.initialized = 1;
+
+    _enable();
+}
+
+static void
+timer_deinit(void)
+{
+    if (!timer.initialized) {
+        return;
+    }
+
+    _disable();
+
+    timer_set_counter_0(0);
+    _dos_setvect(PIT_INTNO, timer.saved_isr);
+    timer.initialized = 0;
+
+    _enable();
+}
+
 static void
 load_song(const char *path)
 {
@@ -237,6 +307,13 @@ load_song(const char *path)
     fclose(file);
 }
 
+static void
+deinit(void)
+{
+    speaker_stop();
+    timer_deinit();
+}
+
 int
 main(int argc, char **argv)
 {
@@ -245,13 +322,19 @@ main(int argc, char **argv)
         exit(1);
     }
 
+    atexit(deinit);
+
     load_song(argv[1]);
 
     printf("Loaded '%s' (%u notes)\n", song.title, song.note_count);
 
+    timer_init();
+
     speaker_play_song(song.notes);
     (void)_bios_keybrd(_KEYBRD_READ);
     speaker_stop();
+
+    deinit();
 
     return 0;
 }
