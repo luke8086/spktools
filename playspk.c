@@ -320,6 +320,30 @@ load_song(const char *path)
 }
 
 static void
+update_progress(int32_t elapsed_ticks, int32_t total_ticks)
+{
+    static int last_elapsed_secs = -1;
+    static int last_total_secs = -1;
+
+    int elapsed_secs = (int)(elapsed_ticks / TICK_FREQUENCY);
+    int total_secs = (int)(total_ticks / TICK_FREQUENCY);
+
+    if (elapsed_secs == last_elapsed_secs && total_secs == last_total_secs) {
+        return;
+    }
+
+    last_elapsed_secs = elapsed_secs;
+    last_total_secs = total_secs;
+
+    printf("\r%02d:%02d / %02d:%02d",
+        elapsed_secs / 60,
+        elapsed_secs % 60,
+        total_secs / 60,
+        total_secs % 60);
+    fflush(stdout);
+}
+
+static void
 deinit(void)
 {
     speaker_stop();
@@ -344,7 +368,7 @@ main(int argc, char **argv)
 
     load_song(argv[1]);
 
-    printf("Loaded '%s' (%u notes)\n", song.title, song.note_count);
+    printf("Playing '%s' (%u notes)\n", song.title, song.note_count);
 
     timer_init();
     speaker_play_song(song.notes);
@@ -361,10 +385,15 @@ main(int argc, char **argv)
             break;
         }
 
+        update_progress(st.song_elapsed_ticks, song.total_ticks);
+
         cpu_hlt();
     }
 
     deinit();
+
+    update_progress(st.song_elapsed_ticks, song.total_ticks);
+    printf("\n");
 
     return 0;
 }
