@@ -2,5 +2,7 @@
 .mscbackup
 /.vscode/*
 /tmp/*
+*.obj
+*.OBJ
 *.swp
 __pycache__
