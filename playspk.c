@@ -122,12 +122,6 @@ die(const char *fmt, ...)
 }
 
 static void
-ignore_signal(int sig)
-{
-    (void)sig;
-}
-
-static void
 speaker_set_freq(uint16_t hz)
 {
     unsigned val;
@@ -470,8 +464,8 @@ main(int argc, char **argv)
     atexit(deinit);
 
     /* Prevent Ctrl-C and Ctrl-Break from stopping the app without deinitialization */
-    signal(SIGINT, ignore_signal);
-    signal(SIGBREAK, ignore_signal);
+    signal(SIGINT, SIG_IGN);
+    signal(SIGBREAK, SIG_IGN);
 
     load_song(argv[1]);
 
