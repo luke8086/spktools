@@ -439,8 +439,8 @@ handle_keyboard(int *wants_quit)
     scancode = key >> 8;
 
     switch (scancode) {
-    case 0x4B: seek_song(0); return; /* Left */
-    case 0x4D: seek_song(1); return; /* Right */
+    case 0x4B: seek_song(0); return; /* Left / numpad 4 */
+    case 0x4D: seek_song(1); return; /* Right / numpad 6 */
     }
 
     switch (ascii) {
