@@ -320,7 +320,7 @@ static void
 load_song(const char *path)
 {
     FILE *file;
-    unsigned pitch, msecs;
+    long unsigned pitch, msecs;
     int32_t ticks;
     int32_t total_msecs = 0;
     int matched;
@@ -335,14 +335,18 @@ load_song(const char *path)
         die("no title in %s", path);
     }
 
-    while ((matched = fscanf(file, "%u %u", &pitch, &msecs)) == 2) {
+    while ((matched = fscanf(file, "%lu %lu", &pitch, &msecs)) == 2) {
         if (song.note_count >= MAX_NOTES - 1) {
             die("%s: more than %u notes", path, MAX_NOTES - 1);
         }
 
+        if (pitch > 0xFFFF || msecs > 0xFFFF) {
+            die("%s:%u: value out of range", path, song.note_count + 2);
+        }
+
         total_msecs += MAX(msecs, 1);
         ticks = ((total_msecs * TICK_FREQUENCY + 500) / 1000) - song.total_ticks;
-        ticks = MAX(MIN(ticks, 0xffff), 1);
+        ticks = MAX(MIN(ticks, 0xFFFF), 1);
 
         song.notes[song.note_count].pitch = (uint16_t)pitch;
         song.notes[song.note_count].ticks = (uint16_t)ticks;
@@ -352,6 +356,10 @@ load_song(const char *path)
 
     if (matched != EOF) {
         die("%s:%u: invalid syntax", path, song.note_count + 2);
+    }
+
+    if (song.note_count == 0) {
+        die("%s: no notes", path);
     }
 
     fclose(file);
