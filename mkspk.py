@@ -9,7 +9,6 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "sounddevice>=0.4,<1",
 # ]
 # ///
 
@@ -31,10 +30,6 @@ NOTE_TYPES = {
     "128th": 0.03125,
     "256th": 0.015625,
 }
-PLAY_SAMPLE_RATE = 44100
-PLAY_AMP_MID = 128
-PLAY_VOLUME = 0.1
-PLAY_TICK_FREQUENCY = 100
 
 def die(msg):
     raise SystemExit(msg)
@@ -280,89 +275,24 @@ def write_spk(path, title, notes):
             f.write(f"{pitch} {ms}\n")
 
 
-def build_square_wave(hz, sample_count):
-    ret = bytearray()
-
-    half_period_sample_count = PLAY_SAMPLE_RATE / (2.0 * hz)
-    half_period_idx = 0
-
-    amp_swing = max(-127, min(127, round(PLAY_VOLUME * PLAY_AMP_MID)))
-    amp_low = PLAY_AMP_MID - amp_swing
-    amp_high = PLAY_AMP_MID + amp_swing
-
-    while len(ret) < sample_count:
-        half_period_idx += 1
-        end_idx = round(half_period_idx * half_period_sample_count)
-        end_idx = min(sample_count, end_idx)
-        count = end_idx - len(ret)
-        ret += bytes([amp_high if half_period_idx % 2 else amp_low]) * count
-
-    return ret
-
-
-def build_playback_samples(notes):
-    ret = []
-
-    for note_idx, ms in notes:
-        ticks = (ms * PLAY_TICK_FREQUENCY + 999) // 1000
-        sample_count = round(ticks * PLAY_SAMPLE_RATE / PLAY_TICK_FREQUENCY)
-
-        if note_idx is None:
-            ret.append(bytes([PLAY_AMP_MID]) * sample_count)
-        else:
-            ret.append(build_square_wave(note_pitch(note_idx), sample_count))
-
-    return ret
-
-
-def play(notes):
-    try:
-        import sounddevice as sd
-    except ImportError:
-        die("Error: mkspk.py requires 'sounddevice' library for playing")
-
-    samples = build_playback_samples(notes)
-
-    stream = sd.RawOutputStream(samplerate=PLAY_SAMPLE_RATE, channels=1, dtype="uint8", latency="low")
-    stream.start()
-
-    try:
-        for buf in samples:
-            stream.write(buf)
-        stream.stop()
-    except KeyboardInterrupt:
-        stream.abort()
-    finally:
-        stream.close()
-
-
 def main():
     parser = argparse.ArgumentParser(description="Convert from MusicXML to SPK")
     parser.add_argument("-i", "--input", metavar="PATH", required=True, help="MusicXML file to read")
-    parser.add_argument("-o", "--output", metavar="PATH", help="SPK file to write")
-    parser.add_argument("-p", "--play", action="store_true", help="Play the song instead of saving")
-    parser.add_argument("-s", "--start", metavar="MEASURE", help="Start playing from the given measure")
+    parser.add_argument("-o", "--output", metavar="PATH", required=True, help="SPK file to write")
     parser.add_argument("-d", "--debug", action="store_true", help="Dump input events")
     args = parser.parse_args()
 
     global DEBUG
     DEBUG = args.debug
 
-    ensure(bool(args.play) != bool(args.output), "Error: specify exactly one of -p and -o")
-    ensure(not args.start or args.play, "Error: -s requires -p")
-
-    (title, notes) = read_musicxml(args.input, args.start if args.play else None)
+    (title, notes) = read_musicxml(args.input, None)
 
     ensure(notes, f"Error: no playable notes in {args.input}")
 
     total_ms = sum(ms for (_, ms) in notes)
 
-    if args.play:
-        print(f"Playing \"{title}\" ({len(notes)} notes, {total_ms} ms)")
-        play(notes)
-    else:
-        write_spk(args.output, title, notes)
-        print(f"Saved {args.output}: \"{title}\" ({len(notes)} notes, {total_ms} ms)")
+    write_spk(args.output, title, notes)
+    print(f"Saved {args.output}: \"{title}\" ({len(notes)} notes, {total_ms} ms)")
 
 if __name__ == "__main__":
     main()

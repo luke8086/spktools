@@ -31,18 +31,25 @@ The author only tested files exported from MuseScore, but other tools may also w
 The score must only contain a single staff, with a single voice and no chords.
 The only recognized elements are: plain notes, rests, grace notes, ties, staccato dots and tempo marks.
 
-The `mkspk` script requires Python 3.10+, preferably managed by [uv](https://docs.astral.sh/uv/). If not using uv, you'll optionally need `sounddevice` Python library for playback.
+The `mkspk` script requires Python 3.10+
 
 
 To convert a score, run:
 
 ```
-uv run mkspk.py -i mysong.musicxml -o mysong.spk
+./mkspk.py -i mysong.musicxml -o mysong.spk
 ```
 
-To preview a score, optionally starting from a given measure, run:
+To rebuild all scores in this repo, run:
 
 ```
-uv run mkspk.py -i mysong.musicxml -p
-uv run mkspk.py -i mysong.musicxml -p -s 12
+make
+```
+
+### Playing SPK files
+
+You can play SPK files on a DOS machine or under DOSBox, just by running:
+
+```
+playspk song.spk
 ```
