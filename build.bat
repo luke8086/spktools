@@ -1,3 +1,5 @@
+IF NOT "%WATCOM%"=="" GOTO build
+
 PATH %PATH%;C:\VENDOR\WATCOM\BINW
 
 SET INCLUDE=C:\VENDOR\WATCOM\H
@@ -6,5 +8,7 @@ SET EDPATH=C:\VENDOR\WATCOM\EDDAT
 SET WIPFC=C:\VENDOR\WATCOM\WIPFC
 
 SET DOS16M=:6M
+
+:build
 
 wcl -0 -ms -wx -fe=playspk.exe playspk.c
