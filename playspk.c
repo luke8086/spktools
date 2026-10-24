@@ -480,7 +480,7 @@ main(int argc, char **argv)
     load_song(argv[1]);
 
     printf("Playing '%s' (%u notes)...\n", song.title, song.note_count);
-    printf("Press ESC to exit\n");
+    printf("Press left/right to rewind, Q to quit\n");
 
     timer_init();
     speaker_play_song(song.notes, song.total_ticks);
