@@ -40,16 +40,15 @@ To convert a score, run:
 ./mkspk.py -i mysong.musicxml -o mysong.spk
 ```
 
-To rebuild all scores in this repo, run:
+To rebuild all scores in this repo, run `make`
 
-```
-make
-```
+## Playing SPK files
 
-### Playing SPK files
+You can play SPK files on a DOS machine or under DOSBox, just by running `playspk song.spk`
 
-You can play SPK files on a DOS machine or under DOSBox, just by running:
+## Compiling playspk
 
-```
-playspk song.spk
-```
+If you want to make changes to the playspk app, to recompile it, run `build.bat`
+on a DOS machine or under DOSBox.
+
+The Watcom C compiler is included in the repo.
