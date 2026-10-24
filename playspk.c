@@ -66,8 +66,6 @@ enum {
     MAX_TITLE = 64,
 };
 
-#define TITLE_FORMAT "%63[^\n]"
-
 typedef void (__interrupt __far *isr_handler_fn)();
 
 typedef struct {
@@ -320,6 +318,7 @@ static void
 load_song(const char *path)
 {
     FILE *file;
+    char title_format[32];
     long unsigned pitch, msecs;
     int32_t ticks;
     int32_t total_msecs = 0;
@@ -331,7 +330,10 @@ load_song(const char *path)
         die("cannot read %s", path);
     }
 
-    if (fscanf(file, TITLE_FORMAT, song.title) != 1) {
+    /* Read up to MAX_TITLE - 1 chars and discard the rest of the line */
+    sprintf(title_format, "%%%d[^\n]%%*[^\n]", MAX_TITLE - 1);
+
+    if (fscanf(file, title_format, song.title) != 1) {
         die("no title in %s", path);
     }
 
