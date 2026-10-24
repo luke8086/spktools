@@ -7,7 +7,7 @@
   <identification>
     <encoding>
       <software>MuseScore Studio 4.7.5</software>
-      <encoding-date>2026-09-29</encoding-date>
+      <encoding-date>2026-10-24</encoding-date>
       <supports element="accidental" type="yes"/>
       <supports element="beam" type="yes"/>
       <supports element="print" attribute="new-page" type="no"/>
@@ -2708,6 +2708,11 @@
         <voice>1</voice>
         <type>eighth</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
@@ -2729,6 +2734,11 @@
         <voice>1</voice>
         <type>quarter</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
@@ -2750,6 +2760,11 @@
         <voice>1</voice>
         <type>quarter</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
@@ -2771,6 +2786,11 @@
         <voice>1</voice>
         <type>quarter</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
@@ -2792,6 +2812,11 @@
         <voice>1</voice>
         <type>eighth</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       </measure>
     <measure number="25">
@@ -2816,6 +2841,11 @@
         <type>eighth</type>
         <accidental>sharp</accidental>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
@@ -2837,6 +2867,11 @@
         <voice>1</voice>
         <type>quarter</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
@@ -2858,6 +2893,11 @@
         <voice>1</voice>
         <type>quarter</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
@@ -2879,6 +2919,11 @@
         <voice>1</voice>
         <type>quarter</type>
         <stem>down</stem>
+        <notations>
+          <articulations>
+            <staccato/>
+            </articulations>
+          </notations>
         </note>
       <note>
         <grace slash="yes"/>
